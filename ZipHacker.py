@@ -30,7 +30,6 @@ def print_intro():
     print(textwrap.fill(blog_text, width=70))
     print("\n" + "-" * 70 + "\n")
 
-
 def is_zip_fake_encrypted(file_path):
     """
     检查zip文件是否存在伪加密
@@ -54,10 +53,9 @@ def fix_zip_encrypted(file_path):
     fix_zip_name = "fix_" + file_path
     try:
         shutil.move(temp_path, fix_zip_name)
-    except Exception as e:
+    except:
         os.remove(fix_zip_name)
         shutil.move(temp_path, fix_zip_name)
-        logging.error(f"修复伪加密文件时出错: {e}", exc_info=True)
     return fix_zip_name
 
 def extract_zip(file_path, target_dir):
@@ -71,7 +69,7 @@ def extract_zip(file_path, target_dir):
         with zipfile.ZipFile(file_path, 'r') as zip_file:
             zip_file.extractall(path=target_dir)
     except Exception as e:
-        logging.error(f"解压 .zip 文件失败: {file_path}, 错误: {e}", exc_info=True)
+        logging.error(f"解压 .zip 文件失败: {file_path}, 错误: {e}")
 
 def extract_tar(file_path, target_dir):
     try:
@@ -80,51 +78,47 @@ def extract_tar(file_path, target_dir):
             with tarfile.open(file_path, 'r:*') as tar_file:
                 tar_file.extractall(path=target_dir)
     except Exception as e:
-        logging.error(f"解压 .tar 文件失败: {file_path}, 错误: {e}", exc_info=True)
+        logging.error(f"解压 .tar 文件失败: {file_path}, 错误: {e}")
 
 def extract_rar(file_path, target_dir):
     try:
         with rarfile.RarFile(file_path, 'r') as rar_file:
             rar_file.extractall(path=target_dir)
     except Exception as e:
-        logging.error(f"解压 .rar 文件失败: {file_path}, 错误: {e}", exc_info=True)
+        logging.error(f"解压 .rar 文件失败: {file_path}, 错误: {e}")
 
 def extract_7z(file_path, target_dir):
     try:
         with py7zr.SevenZipFile(file_path, 'r') as seven_z_file:
             seven_z_file.extractall(path=target_dir)
     except Exception as e:
-        logging.error(f"解压 .7z 文件失败: {file_path}, 错误: {e}", exc_info=True)
-
-def extract_file(file_path, target_dir):
-    """ 根据文件类型解压文件 """
-    if zipfile.is_zipfile(file_path):
-        extract_zip(file_path, target_dir)
-    elif tarfile.is_tarfile(file_path):
-        extract_tar(file_path, target_dir)
-    elif rarfile.is_rarfile(file_path):
-        extract_rar(file_path, target_dir)
-    elif py7zr.is_7zfile(file_path):
-        extract_7z(file_path, target_dir)
-    else:
-        logging.warning(f"无法处理的文件类型: {file_path}")
-        return False
-    return True
+        logging.error(f"解压 .7z 文件失败: {file_path}, 错误: {e}")
 
 def process_file(file_path, target_dir, del_file):
-    """
-    处理文件解压并递归处理嵌套压缩文件
-    """
-    success = extract_file(file_path, target_dir)
+    try:
+        if zipfile.is_zipfile(file_path):
+            extract_zip(file_path, target_dir)
+        elif tarfile.is_tarfile(file_path):
+            extract_tar(file_path, target_dir)
+        elif rarfile.is_rarfile(file_path):
+            extract_rar(file_path, target_dir)
+        elif py7zr.is_7zfile(file_path):
+            extract_7z(file_path, target_dir)
+        else:
+            logging.warning(f"无法处理的文件类型: {file_path}")
+            return False
+    except Exception as e:
+        logging.error(f"处理文件失败: {file_path}, 错误: {e}")
+        return False
 
-    if success and del_file.upper() == 'Y':
+    # 删除文件
+    if del_file.upper() == 'Y':
         try:
             os.remove(file_path)
-            logging.info(f"成功删除原文件: {file_path}")
         except Exception as e:
-            logging.error(f"删除文件失败: {file_path}, 错误: {e}", exc_info=True)
-
-    return success
+            logging.error(f"删除文件失败: {file_path}, 错误: {e}")
+            return False
+    return True
 
 def decompression(dirname, del_file='N'):
     count = 0
@@ -144,18 +138,18 @@ def decompression(dirname, del_file='N'):
         if not file_list:
             break
 
-        for file_path in tqdm(file_list, desc="解压文件进度", unit="file", mininterval=1.0):
+        for file_path in tqdm(file_list, desc="解压文件进度", unit="file"):
             if process_file(file_path, dirname, del_file):
                 count += 1
-                # 输出当前进度和成功解压的文件数量
-                logging.info(f"成功解压文件: {file_path}")
-            else:
-                logging.error(f"处理文件失败: {file_path}")
+
+            # 输出当前进度和成功解压的文件数量
+            print(f"\n当前已解压文件数: {count}")
+            logging.info(f"最新解压的文件: {file_path}\n")
 
     logging.info(f"解压完成，共解压文件 {count} 个")
 
-# 示例调用
+# Example usage:
 try:
     decompression(r'C:\Users\leeso\Desktop\demo', 'Y')  # 修改路径以适合你的情况，Y表示删除原压缩文件
 except Exception as error:
-    logging.error(f"An error occurred: {error}", exc_info=True)
+    logging.error(f"An error occurred: {error}")
